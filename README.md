@@ -399,75 +399,6 @@ for idx, cat in enumerate(weathercats):
 ```
 
 
-```python
-random_cats
-```
-
-
-
-
-    {'nice': ['nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'nice',
-      'bad',
-      'bad',
-      'ok'],
-     'ok': ['ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'ok',
-      'nice',
-      'nice',
-      'bad'],
-     'bad': ['bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'bad',
-      'ok',
-      'ok',
-      'nice']}
-
-
 
 
 ```python
@@ -935,14 +866,6 @@ logreg = LogisticRegression(C = 1e5)
 logreg.fit(X,y)
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:469: FutureWarning: Default multi_class will be changed to 'auto' in 0.22. Specify the multi_class option to silence this warning.
-      "this warning.", FutureWarning)
-
-
-
-
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
                        fit_intercept=True, intercept_scaling=1, l1_ratio=None,
@@ -1226,11 +1149,6 @@ y = data['nice']
 logreg.fit(X,y)
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-
-
-
 
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
@@ -1320,12 +1238,6 @@ y = data['bad']
 ```python
 logreg.fit(X,y)
 ```
-
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-
-
-
 
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
@@ -1527,13 +1439,6 @@ lr = LogisticRegression()
 lr.fit(X_poly, y_train)
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:469: FutureWarning: Default multi_class will be changed to 'auto' in 0.22. Specify the multi_class option to silence this warning.
-      "this warning.", FutureWarning)
-
-
-
 
 
     LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
@@ -1673,11 +1578,6 @@ lr = LogisticRegression()
 ```python
 lr.fit(X_poly, y_train)
 ```
-
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-
-
 
 
 
