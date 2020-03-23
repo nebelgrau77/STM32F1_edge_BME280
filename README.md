@@ -554,6 +554,12 @@ from sklearn.linear_model import LogisticRegression
 
 
 ```python
+from sklearn.model_selection import train_test_split
+
+```
+
+
+```python
 X = data[['temp', 'hum']]
 ```
 
@@ -564,28 +570,40 @@ y = data['weather_cat_idx']
 
 
 ```python
-logreg = LogisticRegression(C = 1e5)
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2, random_state = 33)
+
 ```
 
 
 ```python
-logreg.fit(X,y)
+logreg = LogisticRegression(solver = 'lbfgs', multi_class = 'auto')
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:469: FutureWarning: Default multi_class will be changed to 'auto' in 0.22. Specify the multi_class option to silence this warning.
-      "this warning.", FutureWarning)
+
+```python
+logreg.fit(X_train,y_train)
+```
 
 
 
 
-
-    LogisticRegression(C=100000.0, class_weight=None, dual=False,
-                       fit_intercept=True, intercept_scaling=1, l1_ratio=None,
-                       max_iter=100, multi_class='warn', n_jobs=None, penalty='l2',
-                       random_state=None, solver='warn', tol=0.0001, verbose=0,
+    LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                       intercept_scaling=1, l1_ratio=None, max_iter=100,
+                       multi_class='auto', n_jobs=None, penalty='l2',
+                       random_state=None, solver='lbfgs', tol=0.0001, verbose=0,
                        warm_start=False)
+
+
+
+
+```python
+logreg.score(X_test, y_test)
+```
+
+
+
+
+    0.7255
 
 
 
@@ -597,9 +615,9 @@ logreg.coef_
 
 
 
-    array([[-0.101244  ,  0.03045919],
-           [ 0.06477301, -0.04756651],
-           [ 0.06044765, -0.00114402]])
+    array([[-0.06939296,  0.02591384],
+           [ 0.04325393, -0.0321257 ],
+           [ 0.02613903,  0.00621186]])
 
 
 
@@ -611,7 +629,7 @@ logreg.intercept_
 
 
 
-    array([-0.00954335, -0.69743214, -1.7391654 ])
+    array([ 0.35571337,  0.11988148, -0.47559485])
 
 
 
@@ -659,60 +677,35 @@ plt.pcolormesh(xx, yy, Z, cmap = plt.cm.Paired)
 
 
 
-    <matplotlib.collections.QuadMesh at 0x7feae3ab7a50>
+    <matplotlib.collections.QuadMesh at 0x7feae1fcbad0>
 
 
 
 
-![png](weather_random_files/weather_random_53_1.png)
+![png](weather_random_files/weather_random_56_1.png)
 
 
 
 ```python
-data.info()
+
 ```
 
-    <class 'pandas.core.frame.DataFrame'>
-    RangeIndex: 10000 entries, 0 to 9999
-    Data columns (total 7 columns):
-     #   Column           Non-Null Count  Dtype   
-    ---  ------           --------------  -----   
-     0   temp             10000 non-null  float64 
-     1   hum              10000 non-null  float64 
-     2   hum_cat          10000 non-null  object  
-     3   temp_cat         10000 non-null  object  
-     4   weather          10000 non-null  object  
-     5   weather_cat      10000 non-null  category
-     6   weather_cat_idx  10000 non-null  int8    
-    dtypes: category(1), float64(2), int8(1), object(3)
-    memory usage: 410.4+ KB
+For the MCU firmware we actually need two equations:
+- a boundary between "nice" and everything else
+- a boundary between "bad" and everything else.
+This way given a pair of (T, H) we can check where our datapoint is: if it's above the "bad" line, then it's bad. If it's below the "nice" line, it's "nice". Everything else is "OK". 
 
+Therefore we need to run two binary classifications.
 
 
 ```python
-data['weather_cat'].unique()
-```
-
-
-
-
-    [bad, ok, nice]
-    Categories (3, object): [bad, ok, nice]
-
-
-
-
-```python
-# get the two boundaries for 'nice' and for 'bad'
-```
-
-
-```python
+# these datapoints are "nice", so their "nice" label is 1
 data.loc[data['weather_cat'] == 'nice', 'nice'] = 1
 ```
 
 
 ```python
+# all the not-nice datapoints are 0 
 data.loc[data['nice'].isna(), 'nice'] = 0 
 ```
 
@@ -723,6 +716,7 @@ data.loc[data['nice'].isna(), 'nice'] = 0
 
 
 ```python
+# same thing for "bad" datapoints
 data.loc[data['weather_cat'] == 'bad', 'bad'] = 1
 ```
 
@@ -771,8 +765,44 @@ data.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>21.470655</td>
-      <td>83.023716</td>
+      <td>6.943300</td>
+      <td>73.581285</td>
+      <td>humid</td>
+      <td>cold</td>
+      <td>cold humid</td>
+      <td>bad</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>31.472253</td>
+      <td>69.509132</td>
+      <td>moderate</td>
+      <td>warm</td>
+      <td>warm moderate</td>
+      <td>ok</td>
+      <td>2</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>19.402034</td>
+      <td>41.429291</td>
+      <td>moderate</td>
+      <td>moderate</td>
+      <td>moderate moderate</td>
+      <td>nice</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>18.631376</td>
+      <td>86.497069</td>
       <td>humid</td>
       <td>moderate</td>
       <td>moderate humid</td>
@@ -782,51 +812,15 @@ data.head()
       <td>1.0</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>28.616161</td>
-      <td>6.045310</td>
-      <td>dry</td>
-      <td>warm</td>
-      <td>warm dry</td>
-      <td>nice</td>
-      <td>1</td>
-      <td>1.0</td>
-      <td>0.0</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0.891287</td>
-      <td>5.042417</td>
-      <td>dry</td>
-      <td>cold</td>
-      <td>cold dry</td>
-      <td>bad</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>25.486470</td>
-      <td>88.557170</td>
-      <td>humid</td>
-      <td>warm</td>
-      <td>warm humid</td>
-      <td>bad</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
       <th>4</th>
-      <td>32.860472</td>
-      <td>65.405922</td>
+      <td>34.347380</td>
+      <td>25.864733</td>
       <td>moderate</td>
       <td>warm</td>
       <td>warm moderate</td>
-      <td>ok</td>
-      <td>2</td>
-      <td>0.0</td>
+      <td>nice</td>
+      <td>1</td>
+      <td>1.0</td>
       <td>0.0</td>
     </tr>
   </tbody>
@@ -837,8 +831,18 @@ data.head()
 
 
 ```python
-# logistic regression for 'nice' vs. everything else
+
 ```
+
+Logistic regression for 'nice' vs. everything else:
+
+Our boundary will be a linear function f(x,y,c) = c0 + c1x + c2y. 
+In our case y is the humidity, x is the temperature. c0 is our intercept, and c1 and c2 are the two coefficients.
+So our firmware for each data point will check the following: what is the humidity for a given temperature according to these equations? And if the actual humidity is higher or lower than that, it will be classified as nice, OK, or bad. 
+Example: let's say that the equation is y = 2x + 5. If our temperature is 20 degrees, then the humidity of a point on the decision boundary would be 2 x 20 + 5 = 45. If the actual humidity is less than that, then it's "nice", otherwise it's not nice, and we need to check the second equation to find out whether it is "bad", or something in between the two. 
+
+
+
 
 
 ```python
@@ -853,21 +857,35 @@ y = data['nice']
 
 
 ```python
-logreg.fit(X,y)
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2, random_state = 33)
+
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
+
+```python
+logreg.fit(X_train,y_train)
+```
 
 
 
 
-
-    LogisticRegression(C=100000.0, class_weight=None, dual=False,
-                       fit_intercept=True, intercept_scaling=1, l1_ratio=None,
-                       max_iter=100, multi_class='warn', n_jobs=None, penalty='l2',
-                       random_state=None, solver='warn', tol=0.0001, verbose=0,
+    LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                       intercept_scaling=1, l1_ratio=None, max_iter=100,
+                       multi_class='auto', n_jobs=None, penalty='l2',
+                       random_state=None, solver='lbfgs', tol=0.0001, verbose=0,
                        warm_start=False)
+
+
+
+
+```python
+logreg.score(X_test, y_test)
+```
+
+
+
+
+    0.8845
 
 
 
@@ -885,7 +903,7 @@ W_nice
 
 
 
-    array([[ 0.06477301, -0.04756651]])
+    array([[ 0.0645486 , -0.04738845]])
 
 
 
@@ -897,67 +915,8 @@ b_nice
 
 
 
-    array([-0.69743214])
+    array([-0.67833387])
 
-
-
-
-```python
-logreg.predict(X)
-```
-
-
-
-
-    array([0., 0., 0., ..., 1., 0., 1.])
-
-
-
-
-```python
-fig, ax = plt.subplots(figsize = (8,5))
-plt.scatter(X,y, c = 'r')
-```
-
-
-    ---------------------------------------------------------------------------
-
-    ValueError                                Traceback (most recent call last)
-
-    <ipython-input-54-630efe1772d1> in <module>
-          1 fig, ax = plt.subplots(figsize = (8,5))
-    ----> 2 plt.scatter(X,y, c = 'r')
-    
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/pyplot.py in scatter(x, y, s, c, marker, cmap, norm, vmin, vmax, alpha, linewidths, verts, edgecolors, plotnonfinite, data, **kwargs)
-       2845         verts=verts, edgecolors=edgecolors,
-       2846         plotnonfinite=plotnonfinite, **({"data": data} if data is not
-    -> 2847         None else {}), **kwargs)
-       2848     sci(__ret)
-       2849     return __ret
-
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/__init__.py in inner(ax, data, *args, **kwargs)
-       1599     def inner(ax, *args, data=None, **kwargs):
-       1600         if data is None:
-    -> 1601             return func(ax, *map(sanitize_sequence, args), **kwargs)
-       1602 
-       1603         bound = new_sig.bind(ax, *args, **kwargs)
-
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/axes/_axes.py in scatter(self, x, y, s, c, marker, cmap, norm, vmin, vmax, alpha, linewidths, verts, edgecolors, plotnonfinite, **kwargs)
-       4442         y = np.ma.ravel(y)
-       4443         if x.size != y.size:
-    -> 4444             raise ValueError("x and y must be the same size")
-       4445 
-       4446         if s is None:
-
-
-    ValueError: x and y must be the same size
-
-
-
-![png](weather_random_files/weather_random_71_1.png)
 
 
 
@@ -981,12 +940,12 @@ plt.plot(x, y)
 
 
 
-    [<matplotlib.lines.Line2D at 0x7f52b54fc550>]
+    [<matplotlib.lines.Line2D at 0x7feae245cf50>]
 
 
 
 
-![png](weather_random_files/weather_random_74_1.png)
+![png](weather_random_files/weather_random_78_1.png)
 
 
 
@@ -1007,23 +966,39 @@ y = data['bad']
 
 
 ```python
-logreg.fit(X,y)
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2, random_state = 33)
+
 ```
 
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
+
+```python
+logreg.fit(X_train,y_train)
+```
 
 
 
 
-
-    LogisticRegression(C=100000.0, class_weight=None, dual=False,
-                       fit_intercept=True, intercept_scaling=1, l1_ratio=None,
-                       max_iter=100, multi_class='warn', n_jobs=None, penalty='l2',
-                       random_state=None, solver='warn', tol=0.0001, verbose=0,
+    LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                       intercept_scaling=1, l1_ratio=None, max_iter=100,
+                       multi_class='auto', n_jobs=None, penalty='l2',
+                       random_state=None, solver='lbfgs', tol=0.0001, verbose=0,
                        warm_start=False)
 
 
+
+
+```python
+logreg.score(X_test, y_test)
+```
+
+
+
+
+    0.787
+
+
+
+The accuracy is not great, but again, will do for this simple experiment.
 
 
 ```python
@@ -1039,7 +1014,7 @@ W_bad
 
 
 
-    array([[-0.09984133,  0.03128328]])
+    array([[-0.10061388,  0.03043183]])
 
 
 
@@ -1051,14 +1026,19 @@ b_bad
 
 
 
-    array([-0.04756169])
+    array([-0.02007141])
 
 
+
+Let's see what these two boundaries look like
 
 
 ```python
 t = np.arange(-10,35)
 ```
+
+As said before, our equations are f(x,y,c) = c + c1x + c2y. Therefore c + c1x + c2y = 0, 
+and y = -(c1x + c0) / c2
 
 
 ```python
@@ -1088,17 +1068,16 @@ plt.plot(t, h_bad, c = 'r')
 
 
 
-![png](weather_random_files/weather_random_85_1.png)
+![png](weather_random_files/weather_random_94_1.png)
 
+
+So the points above the red line are "bad", below the green line are "nice", everything in between is "OK". 
+
+Let's see a few examples of (T, H) pairs:
 
 
 ```python
 samples = [(25,70), (10,15), (24,23), (21,60), (7,60), (23,15), (28,80)]
-```
-
-
-```python
-
 ```
 
 
@@ -1109,32 +1088,54 @@ for sample in samples:
     h_nice = -(t * W_nice[0][0] + b_nice[0]) / W_nice[0][1]
     h_bad = -(t * W_bad[0][0] + b_bad[0]) / W_bad[0][1]
     
-    print("temp {}°C, hum {}% - hum_nice {}%, hum_bad {}%".format(t,h,h_nice, h_bad))
+    print("\ntemp {}°C, hum {}% - hum_nice {:.2f}%, hum_bad {:.2f}%".format(t,h,h_nice, h_bad))
     
     if h >= h_bad:
-        print("temp: {}°C, hum: {}% - bad! :(".format(t,h))
+        print("bad! :(".format(t,h))
     elif h <= h_nice:
-        print("temp: {}°C, hum: {}% - nice! :) ".format(t,h))
+        print("nice! :) ".format(t,h))
     else:
-        print("temp: {}°C, hum: {}% - it's ok.".format(t,h))
+        print("it's ok.".format(t,h))
     
 ```
 
-    temp 25°C, hum 70% - hum_nice 19.71291557867815%, hum_bad 81.24403029375354%
-    temp: 25°C, hum: 70% - it's ok.
-    temp 10°C, hum 15% - hum_nice -2.060170511303494%, hum_bad 32.985203098168974%
-    temp: 10°C, hum: 15% - it's ok.
-    temp 24°C, hum 23% - hum_nice 18.261376506012706%, hum_bad 78.02677514738124%
-    temp: 24°C, hum: 23% - it's ok.
-    temp 21°C, hum 60% - hum_nice 13.906759288016376%, hum_bad 68.37500970826433%
-    temp: 21°C, hum: 60% - it's ok.
-    temp 7°C, hum 60% - hum_nice -6.414787729299824%, hum_bad 23.333437659052063%
-    temp: 7°C, hum: 60% - bad! :(
-    temp 23°C, hum 15% - hum_nice 16.809837433347266%, hum_bad 74.80952000100895%
-    temp: 23°C, hum: 15% - nice! :) 
-    temp 28°C, hum 80% - hum_nice 24.06753279667448%, hum_bad 90.89579573287047%
-    temp: 28°C, hum: 80% - it's ok.
+    
+    temp 25°C, hum 70% - hum_nice 19.74%, hum_bad 83.31%
+    it's ok.
+    
+    temp 10°C, hum 15% - hum_nice -0.69%, hum_bad 33.72%
+    it's ok.
+    
+    temp 24°C, hum 23% - hum_nice 18.38%, hum_bad 80.01%
+    it's ok.
+    
+    temp 21°C, hum 60% - hum_nice 14.29%, hum_bad 70.09%
+    it's ok.
+    
+    temp 7°C, hum 60% - hum_nice -4.78%, hum_bad 23.80%
+    bad! :(
+    
+    temp 23°C, hum 15% - hum_nice 17.01%, hum_bad 76.70%
+    nice! :) 
+    
+    temp 28°C, hum 80% - hum_nice 23.82%, hum_bad 93.23%
+    it's ok.
 
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+# TO DO
+
+- try using polynomial feature to obtain equations that would describe the phenomenon better
+- figure out how to apply the resulting coefficients in the firmware
 
 
 ```python
@@ -1144,17 +1145,6 @@ for sample in samples:
 
 ```python
 from sklearn.preprocessing import PolynomialFeatures
-```
-
-
-```python
-from sklearn.pipeline import Pipeline
-```
-
-
-```python
-from sklearn.model_selection import train_test_split
-
 ```
 
 
@@ -1174,7 +1164,7 @@ poly = PolynomialFeatures(degree = 2, interaction_only = False, include_bias = F
 
 
 ```python
-X_train, X_test, y_train, y_test = train_test_split(X,y)
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2, random_state = 33)
 ```
 
 
@@ -1185,7 +1175,7 @@ X_train.shape
 
 
 
-    (7500, 2)
+    (8000, 2)
 
 
 
@@ -1202,289 +1192,59 @@ X_poly.shape
 
 
 
-    (7500, 5)
+    (8000, 5)
 
 
 
 
 ```python
-lr = LogisticRegression()
+logreg.fit(X_poly, y_train)
 ```
-
-
-```python
-lr.fit(X_poly, y_train)
-```
-
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-
 
 
 
 
     LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
                        intercept_scaling=1, l1_ratio=None, max_iter=100,
-                       multi_class='warn', n_jobs=None, penalty='l2',
-                       random_state=None, solver='warn', tol=0.0001, verbose=0,
+                       multi_class='auto', n_jobs=None, penalty='l2',
+                       random_state=None, solver='lbfgs', tol=0.0001, verbose=0,
                        warm_start=False)
 
 
 
 
 ```python
-lr.score(poly.transform(X_test), y_test)
+logreg.score(poly.transform(X_test), y_test)
 ```
 
 
 
 
-    0.9024
+    0.8905
 
 
 
 
 ```python
-lr.coef_
+logreg.coef_
 ```
 
 
 
 
-    array([[-0.09122892,  0.20392801,  0.00076299, -0.00183054, -0.00258896]])
+    array([[-0.11725714,  0.16653708,  0.00098511, -0.00145624, -0.00189715]])
 
 
 
 
 ```python
-lr.intercept_
+logreg.intercept_
 ```
 
 
 
 
-    array([-0.69309577])
-
-
-
-
-```python
-coefs = lr.coef_
-```
-
-
-```python
-intercept = lr.intercept_
-```
-
-
-```python
-X_train
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>hum</th>
-      <th>temp</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1405</th>
-      <td>67.395464</td>
-      <td>10.150922</td>
-    </tr>
-    <tr>
-      <th>4811</th>
-      <td>29.313819</td>
-      <td>-6.109871</td>
-    </tr>
-    <tr>
-      <th>3430</th>
-      <td>18.761767</td>
-      <td>17.954899</td>
-    </tr>
-    <tr>
-      <th>9121</th>
-      <td>41.268629</td>
-      <td>4.066631</td>
-    </tr>
-    <tr>
-      <th>2398</th>
-      <td>93.655351</td>
-      <td>-4.108573</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>7423</th>
-      <td>54.693889</td>
-      <td>23.541253</td>
-    </tr>
-    <tr>
-      <th>61</th>
-      <td>17.386110</td>
-      <td>15.910263</td>
-    </tr>
-    <tr>
-      <th>655</th>
-      <td>35.974192</td>
-      <td>26.260840</td>
-    </tr>
-    <tr>
-      <th>5107</th>
-      <td>68.008626</td>
-      <td>34.832801</td>
-    </tr>
-    <tr>
-      <th>9999</th>
-      <td>1.532594</td>
-      <td>7.270842</td>
-    </tr>
-  </tbody>
-</table>
-<p>7500 rows × 2 columns</p>
-</div>
-
-
-
-
-```python
-df = X_train.copy(deep = True)
-```
-
-
-```python
-df['hum^2'] = df['hum']*df['hum']
-```
-
-
-```python
-df.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>hum</th>
-      <th>temp</th>
-      <th>hum^2</th>
-      <th>hum*temp</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1405</th>
-      <td>67.395464</td>
-      <td>10.150922</td>
-      <td>4542.148591</td>
-      <td>684.126126</td>
-    </tr>
-    <tr>
-      <th>4811</th>
-      <td>29.313819</td>
-      <td>-6.109871</td>
-      <td>859.299977</td>
-      <td>-179.103647</td>
-    </tr>
-    <tr>
-      <th>3430</th>
-      <td>18.761767</td>
-      <td>17.954899</td>
-      <td>352.003899</td>
-      <td>336.865630</td>
-    </tr>
-    <tr>
-      <th>9121</th>
-      <td>41.268629</td>
-      <td>4.066631</td>
-      <td>1703.099700</td>
-      <td>167.824268</td>
-    </tr>
-    <tr>
-      <th>2398</th>
-      <td>93.655351</td>
-      <td>-4.108573</td>
-      <td>8771.324809</td>
-      <td>-384.789825</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-df['hum*temp'] = df['hum']*df['temp']
-```
-
-
-```python
-df['temp^2'] = df['temp']*df['temp']
-```
-
-
-```python
-X_poly
-```
-
-
-
-
-    array([[ 6.73954642e+01,  1.01509224e+01,  4.54214859e+03,
-             6.84126126e+02,  1.03041225e+02],
-           [ 2.93138189e+01, -6.10987084e+00,  8.59299977e+02,
-            -1.79103647e+02,  3.73305216e+01],
-           [ 1.87617669e+01,  1.79548990e+01,  3.52003899e+02,
-             3.36865630e+02,  3.22378397e+02],
-           ...,
-           [ 3.59741916e+01,  2.62608401e+01,  1.29414246e+03,
-             9.44712493e+02,  6.89631721e+02],
-           [ 6.80086255e+01,  3.48328008e+01,  4.62517315e+03,
-             2.36893090e+03,  1.21332401e+03],
-           [ 1.53259427e+00,  7.27084206e+00,  2.34884520e+00,
-             1.11432509e+01,  5.28651442e+01]])
+    array([-0.00502947])
 
 
 
@@ -1505,7 +1265,7 @@ samples
 
 
 
-    [(10, 40), (15, 80), (20, 20), (21, 70), (10, 90), (23, 10), (30, 25)]
+    [(25, 70), (10, 15), (24, 23), (21, 60), (7, 60), (23, 15), (28, 80)]
 
 
 
@@ -1517,7 +1277,7 @@ intercept[0]
 
 
 
-    -0.6930957744600087
+    -0.20143725307720187
 
 
 
@@ -1529,7 +1289,7 @@ coefs[0]
 
 
 
-    array([-0.09122892,  0.20392801,  0.00076299, -0.00183054, -0.00258896])
+    array([-0.11010059,  0.17429446,  0.00093231, -0.00155165, -0.00199997])
 
 
 
@@ -1545,398 +1305,16 @@ for sample in samples:
     print(sample[0], sample[1], f(sample[0], sample[1]))
 ```
 
-    10 40 1.7534785691637973
-    15 80 -4.341625791150808
-    20 20 0.09828297383015894
-    21 70 -3.3742722854597815
-    10 90 -5.793652672391882
-    23 10 -1.028377889576459
-    30 25 -0.6360746689228136
-
-
-
-```python
-x = np.arange(30)
-```
-
-
-```python
-x.shape
-```
-
-
-
-
-    (30,)
-
-
-
-
-```python
-lr.predict?
-```
-
-
-    [0;31mSignature:[0m [0mlr[0m[0;34m.[0m[0mpredict[0m[0;34m([0m[0mX[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
-    [0;31mDocstring:[0m
-    Predict class labels for samples in X.
-    
-    Parameters
-    ----------
-    X : array_like or sparse matrix, shape (n_samples, n_features)
-        Samples.
-    
-    Returns
-    -------
-    C : array, shape [n_samples]
-        Predicted class label per sample.
-    [0;31mFile:[0m      ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py
-    [0;31mType:[0m      method
-
-
-
-
-```python
-fig, ax = plt.subplots(figsize = (8,5))
-plt.plot(x, lr.predict(x))
-```
-
-
-    ---------------------------------------------------------------------------
-
-    ValueError                                Traceback (most recent call last)
-
-    <ipython-input-131-a567e8312f7c> in <module>
-          1 fig, ax = plt.subplots(figsize = (8,5))
-    ----> 2 plt.plot(x, lr.predict(x))
-    
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py in predict(self, X)
-        287             Predicted class label per sample.
-        288         """
-    --> 289         scores = self.decision_function(X)
-        290         if len(scores.shape) == 1:
-        291             indices = (scores > 0).astype(np.int)
-
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py in decision_function(self, X)
-        263                                  "yet" % {'name': type(self).__name__})
-        264 
-    --> 265         X = check_array(X, accept_sparse='csr')
-        266 
-        267         n_features = self.coef_.shape[1]
-
-
-    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/utils/validation.py in check_array(array, accept_sparse, accept_large_sparse, dtype, order, copy, force_all_finite, ensure_2d, allow_nd, ensure_min_samples, ensure_min_features, warn_on_dtype, estimator)
-        519                     "Reshape your data either using array.reshape(-1, 1) if "
-        520                     "your data has a single feature or array.reshape(1, -1) "
-    --> 521                     "if it contains a single sample.".format(array))
-        522 
-        523         # in the future np.flexible dtypes will be handled like object dtypes
-
-
-    ValueError: Expected 2D array, got 1D array instead:
-    array=[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-     24 25 26 27 28 29].
-    Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.
-
-
-
-![png](weather_random_files/weather_random_123_1.png)
-
-
-
-```python
-'''
-Once the model is fit we call .coef_ and .intercept_ to see the predicted coefficients and intercept term. 
-Following the linear form Y = Mx + b we can now see the linear equation for our decision boundary is 
-Sepal_Length * (0.4437) + Petal_Width * (-4.6018) + 0.9626. 
-
-so that's SL * W[0] + PW * W[1] + b
-
-SL is X, PW is Y
-
-so PW * W[1] = -SL * W[0] - b
-therefore PW = -(SL*W[0] + b) / W[1]
-'''
-
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-X = data[['hum', 'temp']]
-```
-
-
-```python
-y = data['nice']
-```
-
-
-```python
-poly = PolynomialFeatures(degree = 2, interaction_only = False, include_bias = False)
-```
-
-
-```python
-X_train, X_test, y_train, y_test = train_test_split(X,y)
-```
-
-
-```python
-X_train.shape
-```
-
-
-
-
-    (7500, 2)
-
-
-
-
-```python
-X_poly = poly.fit_transform(X_train)
-```
-
-
-```python
-X_poly.shape
-```
-
-
-
-
-    (7500, 5)
-
-
-
-
-```python
-lr = LogisticRegression()
-```
-
-
-```python
-lr.fit(X_poly, y_train)
-```
-
-    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
-      FutureWarning)
-
-
-
-
-
-    LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
-                       intercept_scaling=1, l1_ratio=None, max_iter=100,
-                       multi_class='warn', n_jobs=None, penalty='l2',
-                       random_state=None, solver='warn', tol=0.0001, verbose=0,
-                       warm_start=False)
-
-
-
-
-```python
-lr.score(poly.transform(X_test), y_test)
-```
-
-
-
-
-    0.8984
-
-
-
-
-```python
-W = lr.coef_
-```
-
-
-```python
-W
-```
-
-
-
-
-    array([[-0.08605272,  0.19827515,  0.00075882, -0.00193614, -0.00202101]])
-
-
-
-
-```python
-b = lr.intercept_
-```
-
-
-```python
-b
-```
-
-
-
-
-    array([-0.95894752])
-
-
-
-
-```python
-'''
-f(x,y; c) = c_0 + c_1 x + c_2 y + c_3 x² + c_4 x y + c_5 y²
-
-
-linear: 
-
-f(x,y;c) = c_0 + c_1 x + c_2 y
-Y = Mx + b -> Y*c2 = - x*c1  - c0 -> Y = -(x*c1 + c0) / c2
-
-
-
-c4xy + c5y2 +c2y = - c0 - c1x - c3x2
-
-(c4x + c5y + c2)y = -c0 - c1x - c3x2
-
-
-'''
-
-
-```
-
-
-```python
-
-```
-
-
-```python
-def result(x,y):
-    return b[0] + W[0][0]*x + W[0][1]*y + W[0][2]*x*x + W[0][3]*x*y + W[0][4]*y*y
-```
-
-
-```python
-samples = [(25,70), (10,15), (24,23), (21,60), (7,60), (23,15), (28,80)]
-```
-
-
-```python
-for sample in samples:
-    print(sample[0], sample[1], result(sample[0], sample[1]))
-```
-
-    25 70 -2.0479145113402613
-    10 15 0.4853876847428495
-    24 23 -0.16466236681893487
-    21 60 -0.250062424707326
-    7 60 2.2835722283676736
-    23 15 -0.6853089916736277
-    28 80 -4.1828858438687675
+    25 70 -2.685868492902742
+    10 15 0.7224646761356401
+    24 23 -0.2125617852260081
+    21 60 -0.7996910774586912
+    7 60 1.679638707363038
+    23 15 -0.6114539958238703
+    28 80 -4.885246227917177
 
 
 
 ```python
 
 ```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-W_nice
-
-```
-
-
-
-
-    array([[ 0.06826359, -0.04702842]])
-
-
-
-
-```python
-b_nice
-```
-
-
-
-
-    array([-0.77952247])
-
-
-
-
-```python
-x = np.arange(-10,35)
-```
-
-
-```python
-y = -(x * W_nice[0][0] + b_nice[0]) / W_nice[0][1]
-```
-
-
-```python
-fig, ax = plt.subplots(figsize = (8,5))
-ax.set_xlim(-10,35)
-ax.set_ylim(0,100)
-plt.plot(x, y)
-```
-
-
-
-
-    [<matplotlib.lines.Line2D at 0x7fde54be6d90>]
-
-
-
-
-![png](weather_random_files/weather_random_153_1.png)
-
-
-
-```python
-
-```
-
-
-```python
-samples = [(10,40), (15,80), (20,20), (21,70), (10,90), (23, 10), (30,25)]
-```
-
-
-```python
-for sample in samples:
-    print(sample[0]*0.06826359 + sample[1]*-0.04702842 + (-0.77952247))
-```
-
-    -1.9780233700000003
-    -3.5178422200000004
-    -0.3548190700000001
-    -2.6379764800000003
-    -4.32944437
-    0.3202558999999999
-    0.09267473000000004
-
