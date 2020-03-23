@@ -1,6 +1,8 @@
 # WORK IN PROGRESS
 Just a messy notebook I used to generate some synthetic data and labels, to build a simple ML model and get coefficients for decision boundaries, used later in my Rust code on STM32F1 with BME280 environment sensor.
 
+![](edge_bme280.jpg)
+
 
 ```python
 import pandas as pd
