@@ -1,7 +1,19 @@
 # WORK IN PROGRESS
+
 Just a messy notebook I used to generate some synthetic data and labels, to build a simple ML model and get coefficients for decision boundaries, used later in my Rust code on STM32F1 with BME280 environment sensor.
 
-![](edge_bme280.jpg)
+The idea is the following: 
+- collect weather data: temperature (T) in Celsius degrees and relative humidity (H) in %,
+- label such (T, H) pairs as "nice", "OK" or "bad", according to what it feels like with such T and H,
+- build a machine learning model using this data, so that we can predict the comfort level based on T and H,
+- encode said model into a microcontroller firmware, so that the microcontroller can tell us, based on its sensor readings, whether it's "nice", "OK", or "bad".
+
+Ideally the data collection would be done with multiple users, labelling their current environment conditions as one of the three (or more) classes, so that after a while we could have a big table with three columns: "temperature", "humidity", "comfort level". Then we could build our model using the collected data. 
+As I didn't have neither time nor patience to run this for many days and label my data points, I created a synthetic dataset. 
+
+This is of course a very simple case, and not particularly useful. After all, we could simply solve this problem with a few if/else/and lines of code, no need to build a machine learning model. Synthetic or not, the rules are relatively simple: if it's cold and humid, it's unpleasant, warm and dry feels nice, and something in between will be so-so, neither great not terrible. 
+
+This all changes, though, when we have multiple features and we can't really tell right away which of them influences the outcome, and how. That's where machine learning really shines.
 
 
 ```python
@@ -12,6 +24,8 @@ import pandas as pd
 ```python
 import random
 ```
+
+So here's the synthetic dataset. I created 10000 pairs of temperature (between -10 and +35 C) and humidity (between 0 and 100%). Then I had to label them. 
 
 
 ```python
@@ -66,38 +80,38 @@ data.describe()
     </tr>
     <tr>
       <th>mean</th>
-      <td>12.492388</td>
-      <td>49.817336</td>
+      <td>12.468410</td>
+      <td>49.642732</td>
     </tr>
     <tr>
       <th>std</th>
-      <td>13.052862</td>
-      <td>28.783640</td>
+      <td>12.914089</td>
+      <td>28.639811</td>
     </tr>
     <tr>
       <th>min</th>
-      <td>-9.993413</td>
-      <td>0.004202</td>
+      <td>-9.991212</td>
+      <td>0.003738</td>
     </tr>
     <tr>
       <th>25%</th>
-      <td>1.052624</td>
-      <td>25.152596</td>
+      <td>1.292905</td>
+      <td>25.208838</td>
     </tr>
     <tr>
       <th>50%</th>
-      <td>12.520486</td>
-      <td>49.894043</td>
+      <td>12.448255</td>
+      <td>49.527754</td>
     </tr>
     <tr>
       <th>75%</th>
-      <td>23.819750</td>
-      <td>74.581331</td>
+      <td>23.503272</td>
+      <td>73.888507</td>
     </tr>
     <tr>
       <th>max</th>
-      <td>34.994183</td>
-      <td>99.999582</td>
+      <td>34.996883</td>
+      <td>99.990031</td>
     </tr>
   </tbody>
 </table>
@@ -105,10 +119,7 @@ data.describe()
 
 
 
-
-```python
-
-```
+I started with labelling temperature and humidity separately:
 
 
 ```python
@@ -119,74 +130,6 @@ data.loc[data['hum'] > 70, 'hum_cat'] = 'humid'
 data.loc[data['hum_cat'].isna(), 'hum_cat'] = 'moderate'
 
 ```
-
-
-```python
-data.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>temp</th>
-      <th>hum</th>
-      <th>hum_cat</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
-      <td>humid</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
 
 
 ```python
@@ -235,44 +178,46 @@ data.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
+      <td>6.943300</td>
+      <td>73.581285</td>
       <td>humid</td>
       <td>cold</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
+      <td>31.472253</td>
+      <td>69.509132</td>
       <td>moderate</td>
-      <td>moderate</td>
+      <td>warm</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
+      <td>19.402034</td>
+      <td>41.429291</td>
+      <td>moderate</td>
       <td>moderate</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
+      <td>18.631376</td>
+      <td>86.497069</td>
+      <td>humid</td>
       <td>moderate</td>
-      <td>cold</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
+      <td>34.347380</td>
+      <td>25.864733</td>
       <td>moderate</td>
+      <td>warm</td>
     </tr>
   </tbody>
 </table>
 </div>
 
 
+
+Then I combined the two columns, to get more "human" description of the conditions.
 
 
 ```python
@@ -280,85 +225,7 @@ data.head()
 data['weather'] = data['temp_cat'] + ' ' + data['hum_cat']
 ```
 
-
-```python
-data.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>temp</th>
-      <th>hum</th>
-      <th>hum_cat</th>
-      <th>temp_cat</th>
-      <th>weather</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
-      <td>humid</td>
-      <td>cold</td>
-      <td>cold humid</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-      <td>moderate</td>
-      <td>moderate humid</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
-      <td>moderate</td>
-      <td>moderate dry</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
+There are 9 possible combinations:
 
 
 ```python
@@ -368,25 +235,25 @@ data['weather'].unique()
 
 
 
-    array(['cold humid', 'moderate moderate', 'moderate humid',
-           'cold moderate', 'moderate dry', 'warm humid', 'cold dry',
-           'warm dry', 'warm moderate'], dtype=object)
+    array(['cold humid', 'warm moderate', 'moderate moderate',
+           'moderate humid', 'cold moderate', 'warm humid', 'moderate dry',
+           'cold dry', 'warm dry'], dtype=object)
 
 
 
-
-```python
-# weather is classified as one of three classes: 'nice', 'average', 'bad'
-```
+Weather is classified as one of three classes: 'nice', 'average', 'bad'
 
 
 ```python
 weathercats = ['nice', 'ok', 'bad']
 ```
 
+This create three very distinct groups, so to make it more realistic we add some noise. Each group will be labeled with 85% probability with the "correct" label, and with 10% and 5% probability with one of the other two label. 
+Such randomization is supposed to simulate how various respondents in our data collection could feel about the same condtions: if we were collecting data from a 100 users, some of them could actually feel like the "cold and humid" was "OK", or that warm and dry was "bad". 
+
 
 ```python
-# randomize
+# create lists with 85% of "correct" labels, and 10% and 5% of the remaining "incorrect" labels
 
 random_cats = {}
 
@@ -399,8 +266,6 @@ for idx, cat in enumerate(weathercats):
 ```
 
 
-
-
 ```python
 def randomizer(row, cat):
     return random.choice(random_cats[cat])
@@ -408,180 +273,10 @@ def randomizer(row, cat):
 
 
 ```python
-data.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>temp</th>
-      <th>hum</th>
-      <th>hum_cat</th>
-      <th>temp_cat</th>
-      <th>weather</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
-      <td>humid</td>
-      <td>cold</td>
-      <td>cold humid</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-      <td>moderate</td>
-      <td>moderate humid</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
-      <td>moderate</td>
-      <td>moderate dry</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
 data['weather_cat'] = ''
 ```
 
-
-```python
-data.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>temp</th>
-      <th>hum</th>
-      <th>hum_cat</th>
-      <th>temp_cat</th>
-      <th>weather</th>
-      <th>weathercat</th>
-      <th>weather_cat</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
-      <td>humid</td>
-      <td>cold</td>
-      <td>cold humid</td>
-      <td></td>
-      <td></td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-      <td></td>
-      <td></td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-      <td>moderate</td>
-      <td>moderate humid</td>
-      <td></td>
-      <td></td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-      <td></td>
-      <td></td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
-      <td>moderate</td>
-      <td>moderate dry</td>
-      <td></td>
-      <td></td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
+This is the actual labelling. We consider "warm dry" and "moderate dry" as nice, "warm moderate" and "moderate moderate" "OK", everything else is "bad". This is oversimplified, but for this experiment will do.
 
 
 ```python
@@ -642,60 +337,54 @@ data.head()
       <th>hum_cat</th>
       <th>temp_cat</th>
       <th>weather</th>
-      <th>weathercat</th>
       <th>weather_cat</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
+      <td>21.470655</td>
+      <td>83.023716</td>
       <td>humid</td>
-      <td>cold</td>
-      <td>cold humid</td>
-      <td></td>
+      <td>moderate</td>
+      <td>moderate humid</td>
       <td>bad</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-      <td></td>
-      <td>ok</td>
+      <td>28.616161</td>
+      <td>6.045310</td>
+      <td>dry</td>
+      <td>warm</td>
+      <td>warm dry</td>
+      <td>nice</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-      <td>moderate</td>
-      <td>moderate humid</td>
-      <td></td>
+      <td>0.891287</td>
+      <td>5.042417</td>
+      <td>dry</td>
+      <td>cold</td>
+      <td>cold dry</td>
       <td>bad</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-      <td></td>
+      <td>25.486470</td>
+      <td>88.557170</td>
+      <td>humid</td>
+      <td>warm</td>
+      <td>warm humid</td>
       <td>bad</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
+      <td>32.860472</td>
+      <td>65.405922</td>
       <td>moderate</td>
-      <td>moderate dry</td>
-      <td></td>
-      <td>nice</td>
+      <td>warm</td>
+      <td>warm moderate</td>
+      <td>ok</td>
     </tr>
   </tbody>
 </table>
@@ -707,6 +396,8 @@ data.head()
 ```python
 import matplotlib.pyplot as plt
 ```
+
+This is what our points look like on a scatter plot chart. 
 
 
 ```python
@@ -723,13 +414,20 @@ ax.legend(['bad', 'nice', 'ok'])
 
 
 
-    <matplotlib.legend.Legend at 0x7fde692170d0>
+    <matplotlib.legend.Legend at 0x7feb1b610a10>
 
 
 
 
-![png](weather_random_files/weather_random_29_1.png)
+![png](weather_random_files/weather_random_30_1.png)
 
+
+
+```python
+
+```
+
+Our labels are human-readable, but will not work for a machine learning algorithm. They have to be converted into numeric categories.
 
 
 ```python
@@ -774,7 +472,6 @@ data.head()
       <th>hum_cat</th>
       <th>temp_cat</th>
       <th>weather</th>
-      <th>weathercat</th>
       <th>weather_cat</th>
       <th>weather_cat_idx</th>
     </tr>
@@ -782,56 +479,51 @@ data.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
+      <td>6.943300</td>
+      <td>73.581285</td>
       <td>humid</td>
       <td>cold</td>
       <td>cold humid</td>
-      <td></td>
       <td>bad</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
+      <td>31.472253</td>
+      <td>69.509132</td>
       <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-      <td></td>
+      <td>warm</td>
+      <td>warm moderate</td>
       <td>ok</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
+      <td>19.402034</td>
+      <td>41.429291</td>
       <td>moderate</td>
-      <td>moderate humid</td>
-      <td></td>
-      <td>bad</td>
-      <td>0</td>
+      <td>moderate</td>
+      <td>moderate moderate</td>
+      <td>nice</td>
+      <td>1</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
+      <td>18.631376</td>
+      <td>86.497069</td>
+      <td>humid</td>
       <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-      <td></td>
+      <td>moderate humid</td>
       <td>bad</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
+      <td>34.347380</td>
+      <td>25.864733</td>
       <td>moderate</td>
-      <td>moderate dry</td>
-      <td></td>
+      <td>warm</td>
+      <td>warm moderate</td>
       <td>nice</td>
       <td>1</td>
     </tr>
@@ -840,6 +532,20 @@ data.head()
 </div>
 
 
+
+
+```python
+
+```
+
+We use Logistic Regression, a linear classifier model.
+
+# TO DO
+- add test/train split
+- find out how good the model is
+- experiment with some different hyperparameters if possible
+
+- describe the technique used to create the decision boundaries for the MCU: one vs rest
 
 
 ```python
@@ -866,6 +572,14 @@ logreg = LogisticRegression(C = 1e5)
 logreg.fit(X,y)
 ```
 
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
+      FutureWarning)
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:469: FutureWarning: Default multi_class will be changed to 'auto' in 0.22. Specify the multi_class option to silence this warning.
+      "this warning.", FutureWarning)
+
+
+
+
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
                        fit_intercept=True, intercept_scaling=1, l1_ratio=None,
@@ -883,9 +597,9 @@ logreg.coef_
 
 
 
-    array([[-0.09970853,  0.0309918 ],
-           [ 0.06826359, -0.04702842],
-           [ 0.05767628, -0.00212381]])
+    array([[-0.101244  ,  0.03045919],
+           [ 0.06477301, -0.04756651],
+           [ 0.06044765, -0.00114402]])
 
 
 
@@ -897,7 +611,7 @@ logreg.intercept_
 
 
 
-    array([-0.02518554, -0.77952247, -1.6711203 ])
+    array([-0.00954335, -0.69743214, -1.7391654 ])
 
 
 
@@ -945,12 +659,12 @@ plt.pcolormesh(xx, yy, Z, cmap = plt.cm.Paired)
 
 
 
-    <matplotlib.collections.QuadMesh at 0x7fde54c26350>
+    <matplotlib.collections.QuadMesh at 0x7feae3ab7a50>
 
 
 
 
-![png](weather_random_files/weather_random_47_1.png)
+![png](weather_random_files/weather_random_53_1.png)
 
 
 
@@ -960,7 +674,7 @@ data.info()
 
     <class 'pandas.core.frame.DataFrame'>
     RangeIndex: 10000 entries, 0 to 9999
-    Data columns (total 8 columns):
+    Data columns (total 7 columns):
      #   Column           Non-Null Count  Dtype   
     ---  ------           --------------  -----   
      0   temp             10000 non-null  float64 
@@ -968,11 +682,10 @@ data.info()
      2   hum_cat          10000 non-null  object  
      3   temp_cat         10000 non-null  object  
      4   weather          10000 non-null  object  
-     5   weathercat       10000 non-null  object  
-     6   weather_cat      10000 non-null  category
-     7   weather_cat_idx  10000 non-null  int8    
-    dtypes: category(1), float64(2), int8(1), object(4)
-    memory usage: 488.5+ KB
+     5   weather_cat      10000 non-null  category
+     6   weather_cat_idx  10000 non-null  int8    
+    dtypes: category(1), float64(2), int8(1), object(3)
+    memory usage: 410.4+ KB
 
 
 
@@ -1049,7 +762,6 @@ data.head()
       <th>hum_cat</th>
       <th>temp_cat</th>
       <th>weather</th>
-      <th>weathercat</th>
       <th>weather_cat</th>
       <th>weather_cat_idx</th>
       <th>nice</th>
@@ -1059,12 +771,11 @@ data.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>-9.895657</td>
-      <td>94.587835</td>
+      <td>21.470655</td>
+      <td>83.023716</td>
       <td>humid</td>
-      <td>cold</td>
-      <td>cold humid</td>
-      <td></td>
+      <td>moderate</td>
+      <td>moderate humid</td>
       <td>bad</td>
       <td>0</td>
       <td>0.0</td>
@@ -1072,25 +783,23 @@ data.head()
     </tr>
     <tr>
       <th>1</th>
-      <td>19.882215</td>
-      <td>65.536729</td>
-      <td>moderate</td>
-      <td>moderate</td>
-      <td>moderate moderate</td>
-      <td></td>
-      <td>ok</td>
-      <td>2</td>
-      <td>0.0</td>
+      <td>28.616161</td>
+      <td>6.045310</td>
+      <td>dry</td>
+      <td>warm</td>
+      <td>warm dry</td>
+      <td>nice</td>
+      <td>1</td>
+      <td>1.0</td>
       <td>0.0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>10.956352</td>
-      <td>90.759686</td>
-      <td>humid</td>
-      <td>moderate</td>
-      <td>moderate humid</td>
-      <td></td>
+      <td>0.891287</td>
+      <td>5.042417</td>
+      <td>dry</td>
+      <td>cold</td>
+      <td>cold dry</td>
       <td>bad</td>
       <td>0</td>
       <td>0.0</td>
@@ -1098,12 +807,11 @@ data.head()
     </tr>
     <tr>
       <th>3</th>
-      <td>3.653477</td>
-      <td>40.023353</td>
-      <td>moderate</td>
-      <td>cold</td>
-      <td>cold moderate</td>
-      <td></td>
+      <td>25.486470</td>
+      <td>88.557170</td>
+      <td>humid</td>
+      <td>warm</td>
+      <td>warm humid</td>
       <td>bad</td>
       <td>0</td>
       <td>0.0</td>
@@ -1111,15 +819,14 @@ data.head()
     </tr>
     <tr>
       <th>4</th>
-      <td>16.621728</td>
-      <td>18.904795</td>
-      <td>dry</td>
+      <td>32.860472</td>
+      <td>65.405922</td>
       <td>moderate</td>
-      <td>moderate dry</td>
-      <td></td>
-      <td>nice</td>
-      <td>1</td>
-      <td>1.0</td>
+      <td>warm</td>
+      <td>warm moderate</td>
+      <td>ok</td>
+      <td>2</td>
+      <td>0.0</td>
       <td>0.0</td>
     </tr>
   </tbody>
@@ -1149,6 +856,11 @@ y = data['nice']
 logreg.fit(X,y)
 ```
 
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
+      FutureWarning)
+
+
+
 
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
@@ -1173,7 +885,7 @@ W_nice
 
 
 
-    array([[ 0.06826359, -0.04702842]])
+    array([[ 0.06477301, -0.04756651]])
 
 
 
@@ -1185,8 +897,67 @@ b_nice
 
 
 
-    array([-0.77952247])
+    array([-0.69743214])
 
+
+
+
+```python
+logreg.predict(X)
+```
+
+
+
+
+    array([0., 0., 0., ..., 1., 0., 1.])
+
+
+
+
+```python
+fig, ax = plt.subplots(figsize = (8,5))
+plt.scatter(X,y, c = 'r')
+```
+
+
+    ---------------------------------------------------------------------------
+
+    ValueError                                Traceback (most recent call last)
+
+    <ipython-input-54-630efe1772d1> in <module>
+          1 fig, ax = plt.subplots(figsize = (8,5))
+    ----> 2 plt.scatter(X,y, c = 'r')
+    
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/pyplot.py in scatter(x, y, s, c, marker, cmap, norm, vmin, vmax, alpha, linewidths, verts, edgecolors, plotnonfinite, data, **kwargs)
+       2845         verts=verts, edgecolors=edgecolors,
+       2846         plotnonfinite=plotnonfinite, **({"data": data} if data is not
+    -> 2847         None else {}), **kwargs)
+       2848     sci(__ret)
+       2849     return __ret
+
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/__init__.py in inner(ax, data, *args, **kwargs)
+       1599     def inner(ax, *args, data=None, **kwargs):
+       1600         if data is None:
+    -> 1601             return func(ax, *map(sanitize_sequence, args), **kwargs)
+       1602 
+       1603         bound = new_sig.bind(ax, *args, **kwargs)
+
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/matplotlib/axes/_axes.py in scatter(self, x, y, s, c, marker, cmap, norm, vmin, vmax, alpha, linewidths, verts, edgecolors, plotnonfinite, **kwargs)
+       4442         y = np.ma.ravel(y)
+       4443         if x.size != y.size:
+    -> 4444             raise ValueError("x and y must be the same size")
+       4445 
+       4446         if s is None:
+
+
+    ValueError: x and y must be the same size
+
+
+
+![png](weather_random_files/weather_random_71_1.png)
 
 
 
@@ -1210,12 +981,12 @@ plt.plot(x, y)
 
 
 
-    [<matplotlib.lines.Line2D at 0x7fde54be6d90>]
+    [<matplotlib.lines.Line2D at 0x7f52b54fc550>]
 
 
 
 
-![png](weather_random_files/weather_random_66_1.png)
+![png](weather_random_files/weather_random_74_1.png)
 
 
 
@@ -1238,6 +1009,12 @@ y = data['bad']
 ```python
 logreg.fit(X,y)
 ```
+
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
+      FutureWarning)
+
+
+
 
 
     LogisticRegression(C=100000.0, class_weight=None, dual=False,
@@ -1262,7 +1039,7 @@ W_bad
 
 
 
-    array([[-0.09970853,  0.0309918 ]])
+    array([[-0.09984133,  0.03128328]])
 
 
 
@@ -1274,7 +1051,7 @@ b_bad
 
 
 
-    array([-0.02518554])
+    array([-0.04756169])
 
 
 
@@ -1306,12 +1083,12 @@ plt.plot(t, h_bad, c = 'r')
 
 
 
-    [<matplotlib.lines.Line2D at 0x7fde547952d0>]
+    [<matplotlib.lines.Line2D at 0x7f52b54d1d90>]
 
 
 
 
-![png](weather_random_files/weather_random_77_1.png)
+![png](weather_random_files/weather_random_85_1.png)
 
 
 
@@ -1387,7 +1164,7 @@ X = data[['hum', 'temp']]
 
 
 ```python
-y = data['weather_cat_idx']
+y = data['nice']
 ```
 
 
@@ -1439,6 +1216,11 @@ lr = LogisticRegression()
 lr.fit(X_poly, y_train)
 ```
 
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
+      FutureWarning)
+
+
+
 
 
     LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
@@ -1457,7 +1239,7 @@ lr.score(poly.transform(X_test), y_test)
 
 
 
-    0.812
+    0.9024
 
 
 
@@ -1469,9 +1251,7 @@ lr.coef_
 
 
 
-    array([[-0.05867425, -0.22381246,  0.00064098,  0.00203191,  0.00057312],
-           [-0.11351455,  0.17867957,  0.00097417, -0.00152636, -0.00197617],
-           [ 0.16371461,  0.09708219, -0.00176706,  0.00037869, -0.00162209]])
+    array([[-0.09122892,  0.20392801,  0.00076299, -0.00183054, -0.00258896]])
 
 
 
@@ -1483,14 +1263,387 @@ lr.intercept_
 
 
 
-    array([ 2.31396237, -0.29475986, -4.66592429])
+    array([-0.69309577])
 
 
 
 
 ```python
+coefs = lr.coef_
+```
+
+
+```python
+intercept = lr.intercept_
+```
+
+
+```python
+X_train
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>hum</th>
+      <th>temp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1405</th>
+      <td>67.395464</td>
+      <td>10.150922</td>
+    </tr>
+    <tr>
+      <th>4811</th>
+      <td>29.313819</td>
+      <td>-6.109871</td>
+    </tr>
+    <tr>
+      <th>3430</th>
+      <td>18.761767</td>
+      <td>17.954899</td>
+    </tr>
+    <tr>
+      <th>9121</th>
+      <td>41.268629</td>
+      <td>4.066631</td>
+    </tr>
+    <tr>
+      <th>2398</th>
+      <td>93.655351</td>
+      <td>-4.108573</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>7423</th>
+      <td>54.693889</td>
+      <td>23.541253</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>17.386110</td>
+      <td>15.910263</td>
+    </tr>
+    <tr>
+      <th>655</th>
+      <td>35.974192</td>
+      <td>26.260840</td>
+    </tr>
+    <tr>
+      <th>5107</th>
+      <td>68.008626</td>
+      <td>34.832801</td>
+    </tr>
+    <tr>
+      <th>9999</th>
+      <td>1.532594</td>
+      <td>7.270842</td>
+    </tr>
+  </tbody>
+</table>
+<p>7500 rows × 2 columns</p>
+</div>
+
+
+
+
+```python
+df = X_train.copy(deep = True)
+```
+
+
+```python
+df['hum^2'] = df['hum']*df['hum']
+```
+
+
+```python
+df.head()
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>hum</th>
+      <th>temp</th>
+      <th>hum^2</th>
+      <th>hum*temp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1405</th>
+      <td>67.395464</td>
+      <td>10.150922</td>
+      <td>4542.148591</td>
+      <td>684.126126</td>
+    </tr>
+    <tr>
+      <th>4811</th>
+      <td>29.313819</td>
+      <td>-6.109871</td>
+      <td>859.299977</td>
+      <td>-179.103647</td>
+    </tr>
+    <tr>
+      <th>3430</th>
+      <td>18.761767</td>
+      <td>17.954899</td>
+      <td>352.003899</td>
+      <td>336.865630</td>
+    </tr>
+    <tr>
+      <th>9121</th>
+      <td>41.268629</td>
+      <td>4.066631</td>
+      <td>1703.099700</td>
+      <td>167.824268</td>
+    </tr>
+    <tr>
+      <th>2398</th>
+      <td>93.655351</td>
+      <td>-4.108573</td>
+      <td>8771.324809</td>
+      <td>-384.789825</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+df['hum*temp'] = df['hum']*df['temp']
+```
+
+
+```python
+df['temp^2'] = df['temp']*df['temp']
+```
+
+
+```python
+X_poly
+```
+
+
+
+
+    array([[ 6.73954642e+01,  1.01509224e+01,  4.54214859e+03,
+             6.84126126e+02,  1.03041225e+02],
+           [ 2.93138189e+01, -6.10987084e+00,  8.59299977e+02,
+            -1.79103647e+02,  3.73305216e+01],
+           [ 1.87617669e+01,  1.79548990e+01,  3.52003899e+02,
+             3.36865630e+02,  3.22378397e+02],
+           ...,
+           [ 3.59741916e+01,  2.62608401e+01,  1.29414246e+03,
+             9.44712493e+02,  6.89631721e+02],
+           [ 6.80086255e+01,  3.48328008e+01,  4.62517315e+03,
+             2.36893090e+03,  1.21332401e+03],
+           [ 1.53259427e+00,  7.27084206e+00,  2.34884520e+00,
+             1.11432509e+01,  5.28651442e+01]])
+
+
+
+
+```python
+'''
+f(x,y,c) = c0 + c1x + c2y + c3x2 + c4xy + c5y2 
+
+'''
 
 ```
+
+
+```python
+samples
+```
+
+
+
+
+    [(10, 40), (15, 80), (20, 20), (21, 70), (10, 90), (23, 10), (30, 25)]
+
+
+
+
+```python
+intercept[0]
+```
+
+
+
+
+    -0.6930957744600087
+
+
+
+
+```python
+coefs[0]
+```
+
+
+
+
+    array([-0.09122892,  0.20392801,  0.00076299, -0.00183054, -0.00258896])
+
+
+
+
+```python
+def f(x,y):
+    return intercept[0] + x*coefs[0][0] + y*coefs[0][1] + x*x*coefs[0][2] + x*y*coefs[0][3] + y*y*coefs[0][4]
+```
+
+
+```python
+for sample in samples:
+    print(sample[0], sample[1], f(sample[0], sample[1]))
+```
+
+    10 40 1.7534785691637973
+    15 80 -4.341625791150808
+    20 20 0.09828297383015894
+    21 70 -3.3742722854597815
+    10 90 -5.793652672391882
+    23 10 -1.028377889576459
+    30 25 -0.6360746689228136
+
+
+
+```python
+x = np.arange(30)
+```
+
+
+```python
+x.shape
+```
+
+
+
+
+    (30,)
+
+
+
+
+```python
+lr.predict?
+```
+
+
+    [0;31mSignature:[0m [0mlr[0m[0;34m.[0m[0mpredict[0m[0;34m([0m[0mX[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+    [0;31mDocstring:[0m
+    Predict class labels for samples in X.
+    
+    Parameters
+    ----------
+    X : array_like or sparse matrix, shape (n_samples, n_features)
+        Samples.
+    
+    Returns
+    -------
+    C : array, shape [n_samples]
+        Predicted class label per sample.
+    [0;31mFile:[0m      ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py
+    [0;31mType:[0m      method
+
+
+
+
+```python
+fig, ax = plt.subplots(figsize = (8,5))
+plt.plot(x, lr.predict(x))
+```
+
+
+    ---------------------------------------------------------------------------
+
+    ValueError                                Traceback (most recent call last)
+
+    <ipython-input-131-a567e8312f7c> in <module>
+          1 fig, ax = plt.subplots(figsize = (8,5))
+    ----> 2 plt.plot(x, lr.predict(x))
+    
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py in predict(self, X)
+        287             Predicted class label per sample.
+        288         """
+    --> 289         scores = self.decision_function(X)
+        290         if len(scores.shape) == 1:
+        291             indices = (scores > 0).astype(np.int)
+
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/base.py in decision_function(self, X)
+        263                                  "yet" % {'name': type(self).__name__})
+        264 
+    --> 265         X = check_array(X, accept_sparse='csr')
+        266 
+        267         n_features = self.coef_.shape[1]
+
+
+    ~/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/utils/validation.py in check_array(array, accept_sparse, accept_large_sparse, dtype, order, copy, force_all_finite, ensure_2d, allow_nd, ensure_min_samples, ensure_min_features, warn_on_dtype, estimator)
+        519                     "Reshape your data either using array.reshape(-1, 1) if "
+        520                     "your data has a single feature or array.reshape(1, -1) "
+    --> 521                     "if it contains a single sample.".format(array))
+        522 
+        523         # in the future np.flexible dtypes will be handled like object dtypes
+
+
+    ValueError: Expected 2D array, got 1D array instead:
+    array=[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+     24 25 26 27 28 29].
+    Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.
+
+
+
+![png](weather_random_files/weather_random_123_1.png)
+
 
 
 ```python
@@ -1578,6 +1731,11 @@ lr = LogisticRegression()
 ```python
 lr.fit(X_poly, y_train)
 ```
+
+    /home/nebelgrau/miniconda3/envs/minimal_ds/lib/python3.7/site-packages/sklearn/linear_model/logistic.py:432: FutureWarning: Default solver will be changed to 'lbfgs' in 0.22. Specify a solver to silence this warning.
+      FutureWarning)
+
+
 
 
 
@@ -1687,4 +1845,98 @@ for sample in samples:
     7 60 2.2835722283676736
     23 15 -0.6853089916736277
     28 80 -4.1828858438687675
+
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+W_nice
+
+```
+
+
+
+
+    array([[ 0.06826359, -0.04702842]])
+
+
+
+
+```python
+b_nice
+```
+
+
+
+
+    array([-0.77952247])
+
+
+
+
+```python
+x = np.arange(-10,35)
+```
+
+
+```python
+y = -(x * W_nice[0][0] + b_nice[0]) / W_nice[0][1]
+```
+
+
+```python
+fig, ax = plt.subplots(figsize = (8,5))
+ax.set_xlim(-10,35)
+ax.set_ylim(0,100)
+plt.plot(x, y)
+```
+
+
+
+
+    [<matplotlib.lines.Line2D at 0x7fde54be6d90>]
+
+
+
+
+![png](weather_random_files/weather_random_153_1.png)
+
+
+
+```python
+
+```
+
+
+```python
+samples = [(10,40), (15,80), (20,20), (21,70), (10,90), (23, 10), (30,25)]
+```
+
+
+```python
+for sample in samples:
+    print(sample[0]*0.06826359 + sample[1]*-0.04702842 + (-0.77952247))
+```
+
+    -1.9780233700000003
+    -3.5178422200000004
+    -0.3548190700000001
+    -2.6379764800000003
+    -4.32944437
+    0.3202558999999999
+    0.09267473000000004
 

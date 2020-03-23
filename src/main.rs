@@ -162,8 +162,8 @@ fn main() -> ! {
         disp.flush().unwrap();
 
         //delay.delay_ms(50_u16);
-        //should be 100 ms...
-        cortex_m::asm::delay(1 * 8_000 * 100);
+        //should be 1 ms...
+        cortex_m::asm::delay(1 * 8_000_000);
 
 
     }
