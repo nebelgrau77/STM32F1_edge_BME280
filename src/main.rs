@@ -117,15 +117,15 @@ fn main() -> ! {
     loop {
         
         for x in 0..128 {
-            for y in 0..50 {
+            for y in 0..56 {
                 disp.set_pixel(x,y,0);
             }
         }
 
 
         let text_style = TextStyleBuilder::new(Font12x16).text_color(BinaryColor::On).build();
-        let mut buf_temp = ArrayString::<[u8; 7]>::new();
-        let mut buf_hum = ArrayString::<[u8; 7]>::new();
+        let mut buf_temp = ArrayString::<[u8; 9]>::new();
+        let mut buf_hum = ArrayString::<[u8; 9]>::new();
         let mut text_status = ArrayString::<[u8; 16]>::new();
         
         //get values from the sensor
@@ -134,15 +134,15 @@ fn main() -> ! {
         let temperature = measurements.temperature;
         let humidity = measurements.humidity;
 
-        let h_sucks = -(temperature as f32 * UPPER[0] + UPPER[2]) / UPPER[1];
-        let h_nice = -(temperature as f32 * LOWER[0] + LOWER[2]) / LOWER[1];
+        let h_sucks = -(temperature * UPPER[0] + UPPER[2]) / UPPER[1];
+        let h_nice = -(temperature * LOWER[0] + LOWER[2]) / LOWER[1];
 
 
-        format(&mut buf_temp, temperature as u8, 84 as char, 67 as char);
+        format(&mut buf_temp, (temperature * 10.0) as u16, 84 as char, 67 as char);
 
         Text::new(buf_temp.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp);
 
-        format(&mut buf_hum, humidity as u8, 72 as char, 37 as char);
+        format(&mut buf_hum, (humidity * 10.0) as u16, 72 as char, 37 as char);
     
         Text::new(buf_hum.as_str(), Point::new(0, 16)).into_styled(text_style).draw(&mut disp);
 
@@ -157,7 +157,7 @@ fn main() -> ! {
         }
         
         status_display(&mut text_status, status);
-        Text::new(text_status.as_str(), Point::new(0, 32)).into_styled(text_style).draw(&mut disp);
+        Text::new(text_status.as_str(), Point::new(0, 40)).into_styled(text_style).draw(&mut disp);
 
         disp.flush().unwrap();
 
@@ -172,9 +172,14 @@ fn main() -> ! {
 
 // helper function to display temperature and humidity
 
-fn format(buf: &mut ArrayString<[u8; 7]>, val: u8, feature: char, unit: char) {
-    fmt::write(buf, format_args!("{}: {:02} {}", 
-    feature, val, unit)).unwrap();
+fn format(buf: &mut ArrayString<[u8; 9]>, val: u16, feature: char, unit: char) {
+    
+    let tenths = val%10;
+    let singles = (val/10)%10;
+    let tens = (val/100)%10;
+        
+    fmt::write(buf, format_args!("{}: {}{}.{} {}", 
+    feature, tens as u8, singles as u8, tenths as u8, unit)).unwrap();
 }
 
 // helper function to display the weather status
